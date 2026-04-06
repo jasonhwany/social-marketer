@@ -1,32 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { scrapeUrl } from '@/lib/scraper';
-import { getDb } from '@/lib/db';
+import { getSql, initSchema } from '@/lib/db';
+import { log } from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
-  const { url } = (await req.json()) as { url?: string };
-  if (!url) return NextResponse.json({ error: 'URL required' }, { status: 400 });
+  try {
+    const { url } = (await req.json()) as { url?: string };
+    if (!url) return NextResponse.json({ error: 'URL required' }, { status: 400 });
 
-  const scraped = await scrapeUrl(url);
+    const sql = getSql();
+    await initSchema();
 
-  const db = getDb();
-  const existing = db
-    .prepare('SELECT * FROM campaigns WHERE url = ?')
-    .get(url) as { id: number } | undefined;
+    const scraped = await scrapeUrl(url);
 
-  let campaignId: number;
-  if (existing) {
-    db.prepare('UPDATE campaigns SET title = ?, description = ? WHERE id = ?').run(
-      scraped.title,
-      scraped.description,
-      existing.id
-    );
-    campaignId = existing.id;
-  } else {
-    const result = db
-      .prepare('INSERT INTO campaigns (url, title, description) VALUES (?, ?, ?)')
-      .run(url, scraped.title, scraped.description);
-    campaignId = result.lastInsertRowid as number;
+    const existing = await sql`SELECT id FROM campaigns WHERE url = ${url}`;
+    let campaignId: number;
+
+    if (existing[0]) {
+      await sql`UPDATE campaigns SET title = ${scraped.title}, description = ${scraped.description} WHERE id = ${existing[0].id}`;
+      campaignId = existing[0].id as number;
+    } else {
+      const result = await sql`
+        INSERT INTO campaigns (url, title, description)
+        VALUES (${url}, ${scraped.title}, ${scraped.description})
+        RETURNING id
+      `;
+      campaignId = result[0].id as number;
+    }
+
+    log.info('analyze:done', { url, campaignId });
+    return NextResponse.json({ campaignId, scraped });
+  } catch (err) {
+    log.error('analyze:error', err);
+    return NextResponse.json({ error: 'Failed to analyze URL' }, { status: 500 });
   }
-
-  return NextResponse.json({ campaignId, scraped });
 }

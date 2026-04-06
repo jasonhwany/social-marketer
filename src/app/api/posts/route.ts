@@ -1,26 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { getSql } from '@/lib/db';
+import { log } from '@/lib/logger';
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const campaignId = searchParams.get('campaignId');
-  const platform = searchParams.get('platform');
-  const status = searchParams.get('status');
+  try {
+    const { searchParams } = new URL(req.url);
+    const campaignId = searchParams.get('campaignId');
+    const platform = searchParams.get('platform');
+    const status = searchParams.get('status');
+    const sql = getSql();
 
-  const db = getDb();
-  let query = 'SELECT * FROM posts WHERE 1=1';
-  const params: unknown[] = [];
+    let rows;
+    if (campaignId && platform && status) {
+      rows = await sql`SELECT * FROM posts WHERE campaign_id = ${Number(campaignId)} AND platform = ${platform} AND status = ${status} ORDER BY created_at DESC LIMIT 200`;
+    } else if (campaignId && platform) {
+      rows = await sql`SELECT * FROM posts WHERE campaign_id = ${Number(campaignId)} AND platform = ${platform} ORDER BY created_at DESC LIMIT 200`;
+    } else if (campaignId && status) {
+      rows = await sql`SELECT * FROM posts WHERE campaign_id = ${Number(campaignId)} AND status = ${status} ORDER BY created_at DESC LIMIT 200`;
+    } else if (platform && status) {
+      rows = await sql`SELECT * FROM posts WHERE platform = ${platform} AND status = ${status} ORDER BY created_at DESC LIMIT 200`;
+    } else if (campaignId) {
+      rows = await sql`SELECT * FROM posts WHERE campaign_id = ${Number(campaignId)} ORDER BY created_at DESC LIMIT 200`;
+    } else if (platform) {
+      rows = await sql`SELECT * FROM posts WHERE platform = ${platform} ORDER BY created_at DESC LIMIT 200`;
+    } else if (status) {
+      rows = await sql`SELECT * FROM posts WHERE status = ${status} ORDER BY created_at DESC LIMIT 200`;
+    } else {
+      rows = await sql`SELECT * FROM posts ORDER BY created_at DESC LIMIT 200`;
+    }
 
-  if (campaignId) { query += ' AND campaign_id = ?'; params.push(Number(campaignId)); }
-  if (platform)   { query += ' AND platform = ?';    params.push(platform); }
-  if (status)     { query += ' AND status = ?';      params.push(status); }
-
-  query += ' ORDER BY created_at DESC LIMIT 200';
-  return NextResponse.json(db.prepare(query).all(...params));
+    return NextResponse.json(rows);
+  } catch (err) {
+    log.error('posts:get:error', err);
+    return NextResponse.json({ error: 'Failed' }, { status: 500 });
+  }
 }
 
 export async function DELETE(req: NextRequest) {
-  const { id } = (await req.json()) as { id: number };
-  getDb().prepare('DELETE FROM posts WHERE id = ?').run(id);
-  return NextResponse.json({ ok: true });
+  try {
+    const { id } = (await req.json()) as { id: number };
+    const sql = getSql();
+    await sql`DELETE FROM posts WHERE id = ${id}`;
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    log.error('posts:delete:error', err);
+    return NextResponse.json({ error: 'Failed' }, { status: 500 });
+  }
 }

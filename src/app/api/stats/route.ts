@@ -1,24 +1,20 @@
 import { NextResponse } from 'next/server';
-import { getDb, PLATFORMS } from '@/lib/db';
+import { getSql, PLATFORMS } from '@/lib/db';
 import { log } from '@/lib/logger';
 
 export async function GET() {
   try {
-    const db = getDb();
+    const sql = getSql();
 
-    const today = db
-      .prepare(
-        `SELECT platform, COALESCE(posted_count, 0) as count
-         FROM daily_stats WHERE date = date('now')`
-      )
-      .all() as { platform: string; count: number }[];
+    const today = await sql`
+      SELECT platform, COALESCE(posted_count, 0) as count
+      FROM daily_stats WHERE date = CURRENT_DATE
+    ` as { platform: string; count: number }[];
 
-    const totals = db
-      .prepare(
-        `SELECT platform, status, COUNT(*) as count
-         FROM posts GROUP BY platform, status`
-      )
-      .all() as { platform: string; status: string; count: number }[];
+    const totals = await sql`
+      SELECT platform, status, COUNT(*)::int as count
+      FROM posts GROUP BY platform, status
+    ` as { platform: string; status: string; count: number }[];
 
     const platformStats = PLATFORMS.map((p) => ({
       platform: p,

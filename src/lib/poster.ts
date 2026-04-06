@@ -1,16 +1,14 @@
-import { getDb, type Platform } from './db';
+import { getSql, type Platform } from './db';
 import { postToTwitter, type TwitterConfig } from './platforms/twitter';
 import { postToThreads, type ThreadsConfig } from './platforms/threads';
 import { postToFacebook, type FacebookConfig } from './platforms/facebook';
 import { postToReddit, type RedditConfig } from './platforms/reddit';
 
 export async function getPlatformConfig<T>(platform: Platform): Promise<T | null> {
-  const db = getDb();
-  const row = db
-    .prepare('SELECT config FROM platform_settings WHERE platform = ?')
-    .get(platform) as { config: string } | undefined;
-  if (!row) return null;
-  return JSON.parse(row.config) as T;
+  const sql = getSql();
+  const rows = await sql`SELECT config FROM platform_settings WHERE platform = ${platform}`;
+  if (!rows[0]) return null;
+  return JSON.parse(rows[0].config) as T;
 }
 
 export async function postContent(
@@ -18,7 +16,7 @@ export async function postContent(
   platform: Platform,
   content: string
 ): Promise<{ success: boolean; postUrl?: string; error?: string }> {
-  const db = getDb();
+  const sql = getSql();
 
   try {
     let result: { success: boolean; postUrl?: string; error?: string };
@@ -52,31 +50,31 @@ export async function postContent(
         throw new Error(`Unknown platform: ${platform}`);
     }
 
-    db.prepare(
-      `UPDATE posts SET status = 'posted', posted_at = datetime('now'), post_url = ?, error = NULL WHERE id = ?`
-    ).run(result.postUrl ?? null, postId);
+    await sql`
+      UPDATE posts
+      SET status = 'posted', posted_at = NOW(), post_url = ${result.postUrl ?? null}, error = NULL
+      WHERE id = ${postId}
+    `;
 
-    // Update daily stats
-    db.prepare(
-      `INSERT INTO daily_stats (date, platform, posted_count)
-       VALUES (date('now'), ?, 1)
-       ON CONFLICT(date, platform) DO UPDATE SET posted_count = posted_count + 1`
-    ).run(platform);
+    await sql`
+      INSERT INTO daily_stats (date, platform, posted_count)
+      VALUES (CURRENT_DATE, ${platform}, 1)
+      ON CONFLICT (date, platform) DO UPDATE SET posted_count = daily_stats.posted_count + 1
+    `;
 
     return result;
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
-    db.prepare(
-      `UPDATE posts SET status = 'failed', error = ? WHERE id = ?`
-    ).run(error, postId);
+    await sql`UPDATE posts SET status = 'failed', error = ${error} WHERE id = ${postId}`;
     return { success: false, error };
   }
 }
 
-export function getTodayPostedCount(platform: Platform): number {
-  const db = getDb();
-  const row = db
-    .prepare(`SELECT posted_count FROM daily_stats WHERE date = date('now') AND platform = ?`)
-    .get(platform) as { posted_count: number } | undefined;
-  return row?.posted_count ?? 0;
+export async function getTodayPostedCount(platform: Platform): Promise<number> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT posted_count FROM daily_stats
+    WHERE date = CURRENT_DATE AND platform = ${platform}
+  `;
+  return (rows[0]?.posted_count as number) ?? 0;
 }
