@@ -2,59 +2,65 @@ import { generateText } from 'ai';
 import type { ScrapeResult } from './scraper';
 import type { Platform } from './db';
 
-// Routes through Vercel AI Gateway — no provider API key needed.
-// Auth (priority order):
-//   1. OIDC (recommended): run `vercel link && vercel env pull` — auto-rotates every 24h
-//   2. AI_GATEWAY_API_KEY env var — works but requires manual rotation
+// Routes through Vercel AI Gateway via OIDC — run `vercel env pull` locally.
+// On Vercel deployments VERCEL_OIDC_TOKEN is injected automatically.
 const MODEL = 'anthropic/claude-sonnet-4.6';
 
 const PLATFORM_GUIDELINES: Record<Platform, string> = {
   twitter: `
-- Maximum 280 characters
-- Casual, punchy, engaging tone
-- Use 2-3 relevant hashtags
-- Can include emojis
-- Hook in the first sentence
-- Call to action
+- STRICT MAX 280 characters — count every character
+- First 5 words must STOP the scroll — make it impossible to ignore
+- Use pattern interrupts: numbers, ALL CAPS for 1-2 words, "…" cliffhangers
+- Trigger emotions: shock, curiosity, FOMO, anger, desire
+- Emojis strategically (1-3 max, not decorative — emphasis only)
+- End with URL + 2-3 hyper-relevant hashtags
+- NO generic phrases like "Check this out" or "Amazing tool"
 `,
-  threads:
-    `
+  threads: `
 - Up to 500 characters
-- Conversational, authentic tone
-- Story-like or relatable format
-- 3-5 hashtags
-- Can be slightly longer than Twitter
-- Personal or community-driven angle
+- First line = HOOK that forces them to tap "more" — controversial, shocking, or ultra-relatable
+- Write like a human confession or hot take, NOT an ad
+- Use line breaks for dramatic effect
+- Make them feel like they're missing out RIGHT NOW
+- 3-5 hashtags at the end
+- Tone: "I can't believe I found this" or "Nobody talks about this"
 `,
   facebook: `
-- Up to 500 characters for best engagement
-- Friendly and informative tone
-- Ask a question or invite comments
-- 1-3 hashtags only
-- Can use bullet points or line breaks
-- Focus on value/benefit to reader
+- Up to 600 characters
+- Open with a bold claim or polarizing statement that demands a reaction
+- Use "If you [pain point], you NEED to see this" or "I tested X so you don't have to" formats
+- Include a direct question to force engagement ("Am I the only one who...")
+- Line breaks every 1-2 sentences — wall of text = ignored
+- 1-2 hashtags only
+- End with clear CTA + URL
 `,
   reddit: `
-- Title: catchy, question-based or informative (max 300 chars)
-- Body: detailed, helpful, no promotional fluff
 - Format: "TITLE|||BODY"
-- Reddit hates obvious ads — be genuine, educational, or discussion-based
-- No hashtags
-- Focus on value to the community
+- TITLE: Must sound like genuine user discovery, NOT an ad. Use "I found...", "Has anyone tried...", "This changed how I...", "Honest review of..."
+- BODY: 3-5 paragraphs. Start with a relatable problem. Middle: what you discovered and specific results/details. End: honest opinion + URL naturally embedded
+- Write like a real Reddit user who found something cool — skeptical at first, now convinced
+- Include specific details, numbers, comparisons — vagueness = downvotes
+- NO hashtags, NO marketing speak
+- The post should survive a "does this sound like an ad?" test
 `,
 };
 
 const STYLE_VARIATIONS = [
-  'question-based hook (ask the reader a compelling question)',
-  'bold statement or surprising fact',
-  'problem-solution format (identify a pain point, present solution)',
-  'social proof angle (mention popularity, users, or success)',
-  'benefit-first format (lead with the main benefit)',
-  'curiosity gap (hint at something without revealing all)',
-  'how-to or tip format',
-  'behind-the-scenes or story angle',
-  'comparison or contrast',
-  'urgency or FOMO angle',
+  'curiosity gap — reveal just enough to make them NEED to click ("The one thing nobody tells you about X...")',
+  'shocking statistic or counterintuitive fact that challenges assumptions',
+  'personal failure → discovery story ("I wasted 3 months until I found this")',
+  'vs/comparison angle that makes competitors look bad by contrast',
+  'FOMO trigger — "Everyone in [niche] is switching to this"',
+  'controversy bait — bold opinion that splits the audience',
+  'extreme specificity — "How I got X result in Y days using Z"',
+  'direct callout of the exact target audience pain point',
+  'before/after transformation with specific numbers',
+  'contrarian hot take that goes against conventional wisdom',
+  '"secret" or insider knowledge framing',
+  'fear of missing out + time pressure angle',
+  'social proof stacking — users, results, credibility signals',
+  '"I tested X alternatives and here\'s what actually works"',
+  'relatable frustration that this solves ("Tired of X? Me too. Until...")',
 ];
 
 export async function generatePosts(
@@ -73,7 +79,9 @@ export async function generatePosts(
       ? `\n\nAVOID repeating these existing posts (paraphrase differently):\n${existingContents.slice(-5).join('\n---\n')}`
       : '';
 
-  const prompt = `You are a social media marketing expert. Generate ${count} unique promotional posts for the following web service.
+  const prompt = `You are an elite viral content strategist who has grown multiple accounts to millions of followers. Your posts consistently go viral because you understand human psychology — what makes people STOP scrolling, feel compelled to click, and share with others.
+
+Your job: Generate ${count} high-converting social media posts for this service that will drive real traffic.
 
 SERVICE URL: ${url}
 PAGE TITLE: ${scrapeResult.title}
@@ -82,31 +90,42 @@ KEYWORDS: ${scrapeResult.keywords || 'none'}
 PAGE CONTENT SUMMARY: ${scrapeResult.bodyText.slice(0, 800)}
 
 PLATFORM: ${platform.toUpperCase()}
-PLATFORM GUIDELINES:
+PLATFORM RULES:
 ${PLATFORM_GUIDELINES[platform]}
 
-Generate exactly ${count} posts, each using a DIFFERENT style/angle:
+Generate exactly ${count} posts. Each post MUST use a completely different psychological trigger:
 ${styleList}
 
-RULES:
-- Each post must be completely unique in wording and angle
-- Always include the URL: ${url}
-- No repetitive phrases or copy-pasting between posts
-- Be authentic, not spammy
+MANDATORY QUALITY STANDARDS — every post must pass ALL of these:
+✓ The first sentence alone would make someone stop scrolling
+✓ Creates an emotional reaction (curiosity / FOMO / surprise / desire / fear of missing out)
+✓ Feels written by a real human, NOT a marketing bot
+✓ Contains the URL: ${url}
+✓ Zero corporate speak — no "innovative", "cutting-edge", "game-changing", "revolutionary"
+✓ No two posts share similar structure or opening words
+✓ Specific > vague (concrete details beat generic claims every time)
+
+FORBIDDEN (instant disqualification):
+✗ "Check this out!" / "Amazing!" / "Don't miss this!"
+✗ Generic benefit lists
+✗ Obviously promotional tone
+✗ Repeating the same hook pattern
 ${existingNote}
 
-Return ONLY a JSON array, no other text:
+Return ONLY a valid JSON array with no extra text, markdown, or explanation:
 [
-  { "content": "post text here (include URL)", "hashtags": "#tag1 #tag2" },
+  { "content": "full post text including URL", "hashtags": "#tag1 #tag2 #tag3" },
   ...
 ]
 
-For Reddit format content as: "Post Title Here|||Post body with more detail here. URL: ${url}"`;
+Reddit posts must follow this format exactly:
+{ "content": "Attention-grabbing title that sounds like real discovery|||Detailed body paragraph 1.\\n\\nParagraph 2 with specifics.\\n\\nURL: ${url}", "hashtags": "" }`;
 
   const { text } = await generateText({
     model: MODEL,
+    system: `You are a viral content expert. You write posts that make people stop, feel something, and click. You never write generic marketing copy. Every post you write could stand alone as organic content — not an ad.`,
     prompt,
-    temperature: 0.9,
+    temperature: 1.0,
   });
 
   const jsonMatch = text.match(/\[[\s\S]*\]/);
