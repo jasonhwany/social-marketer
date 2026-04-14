@@ -77,12 +77,13 @@ export function PlatformSettings() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ platform, config }),
       });
-      if (!res.ok) throw new Error();
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "알 수 없는 오류");
       toast.success(`${PLATFORM_META[platform]?.label} 설정 저장 완료`);
       loadSettings();
       setExpanded(null);
-    } catch {
-      toast.error("저장 실패");
+    } catch (e) {
+      toast.error(`저장 실패: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setSaving(null);
     }

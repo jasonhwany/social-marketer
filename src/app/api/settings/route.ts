@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
     const { platform, config } = (await req.json()) as { platform: string; config: Record<string, string> };
     if (!platform || !config) return NextResponse.json({ error: 'platform and config required' }, { status: 400 });
     const sql = getSql();
+    await initSchema();
     await sql`
       INSERT INTO platform_settings (platform, config, updated_at)
       VALUES (${platform}, ${JSON.stringify(config)}, NOW())
@@ -38,8 +39,9 @@ export async function POST(req: NextRequest) {
     `;
     return NextResponse.json({ ok: true });
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
     log.error('settings:post:error', err);
-    return NextResponse.json({ error: 'Failed' }, { status: 500 });
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
