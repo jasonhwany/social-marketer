@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 type PlatformStat = {
   platform: string;
@@ -12,11 +10,11 @@ type PlatformStat = {
   total_failed: number;
 };
 
-const PLATFORM_EMOJI: Record<string, string> = {
-  twitter: "𝕏",
-  threads: "⊕",
-  facebook: "f",
-  reddit: "r/",
+const PLATFORM_CONFIG: Record<string, { emoji: string; label: string; color: string; bg: string }> = {
+  twitter: { emoji: "𝕏", label: "Twitter / X", color: "text-sky-400", bg: "bg-sky-500/10 border-sky-500/20" },
+  threads: { emoji: "⊕", label: "Threads", color: "text-purple-400", bg: "bg-purple-500/10 border-purple-500/20" },
+  facebook: { emoji: "f", label: "Facebook", color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
+  reddit: { emoji: "r/", label: "Reddit", color: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/20" },
 };
 
 const DAILY_TARGET = 15;
@@ -38,37 +36,51 @@ export function StatsBar({ refreshKey }: Props) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
       {stats.map((s) => {
+        const cfg = PLATFORM_CONFIG[s.platform] ?? { emoji: s.platform, label: s.platform, color: "text-primary", bg: "bg-primary/10 border-primary/20" };
         const pct = Math.min(100, Math.round((s.today / DAILY_TARGET) * 100));
+        const isGoalMet = s.today >= DAILY_TARGET;
+
         return (
-          <Card key={s.platform} className="border-border">
-            <CardContent className="p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-lg font-bold text-primary">
-                  {PLATFORM_EMOJI[s.platform]}
-                </span>
-                <Badge variant={s.today >= DAILY_TARGET ? "default" : "secondary"} className="text-xs">
-                  오늘 {s.today}/{DAILY_TARGET}
-                </Badge>
+          <div
+            key={s.platform}
+            className="rounded-xl border border-border/50 bg-card/60 p-4 space-y-3 hover:border-border transition-colors"
+          >
+            <div className="flex items-start justify-between">
+              <div className={`w-9 h-9 rounded-lg border flex items-center justify-center text-sm font-bold font-mono ${cfg.bg} ${cfg.color}`}>
+                {cfg.emoji}
               </div>
-              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+              <div className={`text-xs font-medium px-2 py-0.5 rounded-full ${isGoalMet ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20" : "bg-muted/60 text-muted-foreground border border-border/50"}`}>
+                {s.today}/{DAILY_TARGET}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs text-muted-foreground mb-1.5">{cfg.label}</p>
+              <div className="h-1 bg-muted/50 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-primary rounded-full transition-all"
+                  className={`h-full rounded-full transition-all duration-700 ${isGoalMet ? "bg-emerald-500" : "bg-primary"}`}
                   style={{ width: `${pct}%` }}
                 />
               </div>
-              <div className="flex gap-2 text-xs text-muted-foreground">
-                <span>대기 {s.total_pending}</span>
-                <span>·</span>
-                <span>완료 {s.total_posted}</span>
-                {s.total_failed > 0 && (
-                  <>
-                    <span>·</span>
-                    <span className="text-destructive">실패 {s.total_failed}</span>
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400/70 inline-block" />
+                {s.total_pending}
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/70 inline-block" />
+                {s.total_posted}
+              </span>
+              {s.total_failed > 0 && (
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400/70 inline-block" />
+                  <span className="text-red-400">{s.total_failed}</span>
+                </span>
+              )}
+            </div>
+          </div>
         );
       })}
     </div>

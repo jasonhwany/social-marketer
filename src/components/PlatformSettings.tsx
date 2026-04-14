@@ -2,12 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Settings, Check, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Settings2, Check, X, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 
 type FieldDef = { key: string; label: string; placeholder: string };
 
@@ -35,11 +33,11 @@ const PLATFORM_FIELDS: Record<string, FieldDef[]> = {
   ],
 };
 
-const PLATFORM_LABELS: Record<string, string> = {
-  twitter: "𝕏 Twitter / X",
-  threads: "⊕ Threads",
-  facebook: "f Facebook",
-  reddit: "r/ Reddit",
+const PLATFORM_META: Record<string, { label: string; emoji: string; desc: string; style: string; activeStyle: string }> = {
+  twitter:  { label: "X / Twitter", emoji: "𝕏", desc: "OAuth 1.0a", style: "text-sky-400", activeStyle: "border-sky-500/40 bg-sky-500/5" },
+  threads:  { label: "Threads", emoji: "⊕", desc: "Meta API", style: "text-purple-400", activeStyle: "border-purple-500/40 bg-purple-500/5" },
+  facebook: { label: "Facebook", emoji: "f", desc: "Graph API", style: "text-blue-400", activeStyle: "border-blue-500/40 bg-blue-500/5" },
+  reddit:   { label: "Reddit", emoji: "r/", desc: "OAuth 2.0", style: "text-orange-400", activeStyle: "border-orange-500/40 bg-orange-500/5" },
 };
 
 export function PlatformSettings() {
@@ -80,7 +78,7 @@ export function PlatformSettings() {
         body: JSON.stringify({ platform, config }),
       });
       if (!res.ok) throw new Error();
-      toast.success(`${PLATFORM_LABELS[platform]} 설정 저장 완료`);
+      toast.success(`${PLATFORM_META[platform]?.label} 설정 저장 완료`);
       loadSettings();
       setExpanded(null);
     } catch {
@@ -101,72 +99,91 @@ export function PlatformSettings() {
   };
 
   return (
-    <Card className="border-border">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Settings className="h-4 w-4 text-primary" />
-          플랫폼 API 설정
-        </CardTitle>
-        <CardDescription>각 SNS 플랫폼의 API 인증 정보를 입력하세요</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <div className="rounded-xl border border-border/50 bg-card/60 overflow-hidden">
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-border/40">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-muted/50 border border-border/50 flex items-center justify-center">
+            <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold">플랫폼 API 설정</h2>
+            <p className="text-xs text-muted-foreground">각 SNS 플랫폼의 API 인증 정보를 입력하세요</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Platform List */}
+      <div className="divide-y divide-border/30">
         {Object.keys(PLATFORM_FIELDS).map((platform) => {
           const isConfigured = configured.includes(platform);
           const isExpanded = expanded === platform;
+          const meta = PLATFORM_META[platform];
 
           return (
-            <div key={platform} className="rounded-md border border-border overflow-hidden">
+            <div key={platform}>
               <button
-                className="w-full flex items-center justify-between p-3 hover:bg-muted/30 transition-colors"
+                className={`w-full flex items-center justify-between px-5 py-4 hover:bg-muted/20 transition-colors text-left ${isExpanded ? meta.activeStyle : ""}`}
                 onClick={() => setExpanded(isExpanded ? null : platform)}
               >
+                <div className="flex items-center gap-3">
+                  <span className={`text-base font-bold font-mono w-6 ${meta.style}`}>{meta.emoji}</span>
+                  <div>
+                    <p className="text-sm font-medium">{meta.label}</p>
+                    <p className="text-xs text-muted-foreground">{meta.desc}</p>
+                  </div>
+                </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-sm">{PLATFORM_LABELS[platform]}</span>
                   {isConfigured ? (
-                    <Badge className="text-xs h-4 gap-1">
-                      <Check className="h-2.5 w-2.5" /> 연결됨
-                    </Badge>
+                    <span className="inline-flex items-center gap-1 text-xs bg-emerald-500/12 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                      <Check className="h-3 w-3" /> 연결됨
+                    </span>
                   ) : (
-                    <Badge variant="secondary" className="text-xs h-4">미설정</Badge>
+                    <span className="text-xs text-muted-foreground bg-muted/40 px-2 py-0.5 rounded-full border border-border/40">
+                      미설정
+                    </span>
+                  )}
+                  {isExpanded ? (
+                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
                   )}
                 </div>
-                {isExpanded ? (
-                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                )}
               </button>
 
               {isExpanded && (
-                <div className="px-3 pb-3 space-y-3 border-t border-border pt-3">
+                <div className="px-5 pb-5 pt-3 space-y-3 bg-muted/10 border-t border-border/30">
                   {PLATFORM_FIELDS[platform].map((field) => (
                     <div key={field.key}>
-                      <Label className="text-xs">{field.label}</Label>
+                      <Label className="text-xs text-muted-foreground">{field.label}</Label>
                       <Input
                         type={field.key.toLowerCase().includes("secret") || field.key === "password" ? "password" : "text"}
                         placeholder={field.placeholder}
                         value={forms[platform]?.[field.key] ?? ""}
                         onChange={(e) => handleFieldChange(platform, field.key, e.target.value)}
-                        className="mt-1 h-8 text-sm font-mono"
+                        className="mt-1 h-8 text-xs font-mono bg-muted/30 border-border/60 focus:border-primary/50"
                       />
                     </div>
                   ))}
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 pt-1">
                     <Button
                       size="sm"
                       onClick={() => handleSave(platform)}
                       disabled={saving === platform}
+                      className="h-8 text-xs"
                     >
-                      {saving === platform ? "저장 중..." : "저장"}
+                      {saving === platform ? (
+                        <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />저장 중</>
+                      ) : "저장"}
                     </Button>
                     {isConfigured && (
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="text-destructive hover:text-destructive"
+                        className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
                         onClick={() => handleRemove(platform)}
                       >
-                        <X className="h-3.5 w-3.5 mr-1" /> 삭제
+                        <X className="h-3.5 w-3.5 mr-1" />삭제
                       </Button>
                     )}
                   </div>
@@ -175,7 +192,7 @@ export function PlatformSettings() {
             </div>
           );
         })}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

@@ -6,7 +6,7 @@ import { CampaignForm } from "@/components/CampaignForm";
 import { StatsBar } from "@/components/StatsBar";
 import { PostList } from "@/components/PostList";
 import { PlatformSettings } from "@/components/PlatformSettings";
-import { Megaphone } from "lucide-react";
+import { Zap, LayoutGrid, Settings2 } from "lucide-react";
 
 export default function Home() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -15,37 +15,65 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Megaphone className="h-5 w-5 text-primary" />
-            <span className="font-semibold text-sm">Social Marketer</span>
+      {/* Header */}
+      <header className="border-b border-border/50 bg-card/40 backdrop-blur-xl sticky top-0 z-20">
+        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center">
+              <Zap className="h-3.5 w-3.5 text-primary" />
+            </div>
+            <span className="font-semibold text-sm tracking-tight">Social Marketer</span>
+            <span className="hidden sm:inline-flex items-center gap-1 text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full border border-border/50">
+              AI-Powered
+            </span>
           </div>
-          <span className="text-xs text-muted-foreground">
-            X · Threads · Facebook · Reddit 자동 홍보
-          </span>
+          <div className="flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-xs text-muted-foreground">Active</span>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+      {/* Hero gradient */}
+      <div className="absolute top-14 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+
+      <main className="max-w-5xl mx-auto px-6 py-8 space-y-7">
         <StatsBar refreshKey={refreshKey} />
 
         <Tabs defaultValue="campaign">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="campaign">캠페인</TabsTrigger>
-            <TabsTrigger value="posts">게시글 관리</TabsTrigger>
-            <TabsTrigger value="settings">API 설정</TabsTrigger>
+          <TabsList className="h-10 p-1 bg-muted/40 border border-border/50 rounded-xl gap-0.5">
+            <TabsTrigger
+              value="campaign"
+              className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-4 data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-foreground"
+            >
+              <Zap className="h-3.5 w-3.5" />
+              캠페인
+            </TabsTrigger>
+            <TabsTrigger
+              value="posts"
+              className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-4 data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-foreground"
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              게시글
+            </TabsTrigger>
+            <TabsTrigger
+              value="settings"
+              className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-4 data-[state=active]:bg-card data-[state=active]:shadow-sm data-[state=active]:text-foreground"
+            >
+              <Settings2 className="h-3.5 w-3.5" />
+              설정
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="campaign" className="mt-4">
+          <TabsContent value="campaign" className="mt-5">
             <CampaignForm onCreated={refresh} />
           </TabsContent>
 
-          <TabsContent value="posts" className="mt-4">
+          <TabsContent value="posts" className="mt-5">
             <PostList refreshKey={refreshKey} onPosted={refresh} />
           </TabsContent>
 
-          <TabsContent value="settings" className="mt-4">
+          <TabsContent value="settings" className="mt-5">
             <PlatformSettings />
           </TabsContent>
         </Tabs>
