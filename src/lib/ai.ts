@@ -2,8 +2,7 @@ import { generateText } from 'ai';
 import type { ScrapeResult } from './scraper';
 import type { Platform } from './db';
 
-// Routes through Vercel AI Gateway via OIDC — run `vercel env pull` locally.
-// On Vercel deployments VERCEL_OIDC_TOKEN is injected automatically.
+// Vercel AI Gateway — requires AI_GATEWAY_API_KEY env var
 const MODEL = 'anthropic/claude-sonnet-4.6';
 
 const PLATFORM_GUIDELINES: Record<Platform, string> = {
